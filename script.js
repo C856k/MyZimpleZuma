@@ -1,14 +1,16 @@
-"use strict"
+"use strict";
 
 window.addEventListener("load", start);
+
+let cannonBall = null;
 
 function start() {
   console.log(`Started`);
   
-  // create balls
+  // Opret og tilføj kugler til visning
   test_createBalls();
   
-  // load cannon with a random ball
+  // Indlæs kanonen med en tilfældig kugle
   reloadCannon();
 }
 
@@ -27,95 +29,28 @@ function test_createBalls() {
 
 function reloadCannon() {
   // loads the cannon with a random ball
-  const balltype = Math.ceil(Math.random()*6); 
+  const balltype = Math.ceil(Math.random() * 6); 
   loadCannonWithBall(createBallElement(balltype));
 }
 
-
-
-
-// *** GRAPHICS / VIEW ***
-
-function clickBall(event) {
-  console.log('Clicked ball');
-
-  newBall.classList.add("slide-in")
-
-  // figure out if clicked on the left or right side
-  const side = event.offsetX / event.target.offsetWidth < .5 ? "before" : "after";
-
-  // use the cannonBall as the new element
-  const newBall = cannonBall;
-
+function shootCannonBall() {
   const cannonBallRect = cannonBall.getBoundingClientRect();
+  const firstBall = document.querySelector("#balls .ball");
+  const firstBallRect = firstBall.getBoundingClientRect();
 
-  if (side === "before") {
-    existingBall.parentNode.insertBefore(cannonBall, existingBall);
-  } else {
-    existingBall.parentNode.insertBefore(cannonBall, existingBall.nextElementSibling)
-  }
+  const deltaX = firstBallRect.left - cannonBallRect.left;
+  const deltaY = firstBallRect.top - cannonBallRect.top;
 
-  const matches = findMatchesInModel();
-  removeMatchesFrom
+  cannonBall.style.setProperty('--delta-x', deltaX + 'px');
+  cannonBall.style.setProperty('--delta-y', deltaY + 'px');
 
-  const finalRect = cannonBall.getBoundingClientRect();
-
-  const deltaWidth = cannonBallRect.width / finalRect.width;
-  const deltaHeight = cannonBallRect.height / finalRect.height;
-
-  cannonBall.style.setProperty('--delta-x', deltaX);
-  cannonBall.style.setProperty('--delta-y', deltaY);
-  cannonBall.style.setProperty('--delta-height', deltaHeight);
-  cannonBall.style.setProperty('--delta-width', deltaWidth);
-
-  cannonBall.classList.add('animate-from-cannon');
-
-
-  // Remember the starting-position of the cannonBall - before inserting in the chain
-  const source = newBall.getBoundingClientRect();
-
-  // find the clicked ball (the div that contains the img clicked)
-  const existingBall = event.target.parentElement;
-  if(side === "before") {
-    // insert cannonBall before existing ...
-    existingBall.parentNode.insertBefore(newBall, existingBall);
-  } else {
-    // insert cannonBall after this
-    existingBall.parentNode.insertBefore(newBall, existingBall.nextElementSibling);
-  }
-
-  // now the cannonBall is inserted in the chain - but it has to be animated, so FLIP it
-  // Keep the div where it is, only animate the img.
-  const img = newBall.firstElementChild;
-  // 1. Find current position of the cannonball - that is the destination
-  const dest = img.getBoundingClientRect();
-  
-  // 2. Translate it back to the starting-position
-  const deltaX = source.x - dest.x;
-  const deltaY = source.y - dest.y;
-
-  // 3. Animate it to destination-position (translate->0)
-  img.style.setProperty("--delta-x", deltaX + "px");
-  img.style.setProperty("--delta-y", deltaY + "px");
-  img.classList.add("animatefromcannon");
-  // while doing that - animate the space
-  newBall.classList.add("expand");
-
-  newBall.addEventListener("animationend", animationComplete);
-
-  function animationComplete() {
-    newBall.removeEventListener("animationend", animationComplete);
-    newBall.classList.remove("expand");
-    img.classList.remove("animatefromcannon");
-    img.style.removeProperty("--delta-x");
-    img.style.removeProperty("--delta-y");
-
-    // make newBall clickable as well
-    makeBallClickable(newBall);
-
-    // create new cannonball
+  cannonBall.addEventListener('animationend', function() {
+    cannonBall.style.removeProperty('--delta-x');
+    cannonBall.style.removeProperty('--delta-y');
+    cannonBall.classList.remove('animate-from-cannon');
+    firstBall.parentNode.insertBefore(cannonBall, firstBall);
     reloadCannon();
-  }
+  });
 }
 
 function createBallElement(balltype) {
@@ -132,14 +67,14 @@ function createBallElement(balltype) {
 function addBallToChain(ball) {
   // add ball to element
   document.querySelector("#balls").appendChild(ball);
-  makeBallClickable(ball)
+  makeBallClickable(ball);
 }
 
 function removeBallsFromChain(balls) {
   balls.forEach(ball => {
     ball.classList.add("remove");
     // wait for next frame to start new animation
-    requestAnimationFrame( () => ball.addEventListener("animationend", removeElement));
+    requestAnimationFrame(() => ball.addEventListener("animationend", removeElement));
     function removeElement() {
       ball.removeEventListener("animationend", removeElement);
       ball.remove();
@@ -152,9 +87,91 @@ function makeBallClickable(ball) {
   ball.querySelector("img").addEventListener("click", clickBall);
 }
 
-let cannonBall = null;
-
 function loadCannonWithBall(newCannonBall) {
   cannonBall = newCannonBall;
   document.querySelector("#cannon").appendChild(cannonBall);
+}
+
+function clickBall(event) {
+  console.log('Clicked ball');
+
+  const newBall = cannonBall;
+  const existingBall = event.target.parentElement;
+  const side = event.offsetX / event.target.offsetWidth < 0.5 ? "before" : "after";
+
+  const cannonBallRect = cannonBall.getBoundingClientRect();
+
+  if (side === "before") {
+    existingBall.parentNode.insertBefore(cannonBall, existingBall);
+  } else {
+    existingBall.parentNode.insertBefore(cannonBall, existingBall.nextElementSibling)
+  }
+
+  const matches = findMatchesInModel();
+  removeMatchesFromModel(matches);
+  animateMatches(matches);
+
+  const finalRect = cannonBall.getBoundingClientRect();
+  const deltaWidth = cannonBallRect.width / finalRect.width;
+  const deltaHeight = cannonBallRect.height / finalRect.height;
+
+  cannonBall.style.setProperty('--delta-x', finalRect.left - cannonBallRect.left + 'px');
+  cannonBall.style.setProperty('--delta-y', finalRect.top - cannonBallRect.top + 'px');
+  cannonBall.style.setProperty('--delta-height', deltaHeight);
+  cannonBall.style.setProperty('--delta-width', deltaWidth);
+
+  cannonBall.classList.add('animate-from-cannon');
+
+  cannonBall.addEventListener('animationend', animationComplete);
+
+  function animationComplete() {
+    cannonBall.removeEventListener('animationend', animationComplete);
+    cannonBall.classList.remove('animate-from-cannon');
+    cannonBall.style.removeProperty('--delta-x');
+    cannonBall.style.removeProperty('--delta-y');
+
+    // Make newBall clickable as well
+    makeBallClickable(newBall);
+
+    // Create new cannonball
+    reloadCannon();
+  }
+}
+
+function findMatchesInModel() {
+const balls = document.querySelectorAll('.ball img');
+const matches = [];
+
+for (let i = 0; i < balls.length; i++) {
+  const currentBall = balls[i];
+  const nextBall = balls[i + 1];
+  const nextNextBall = balls[i + 2];
+
+  if (nextBall && nextNextBall) {
+    if (currentBall.dataset.balltype === nextBall.dataset.balltype && currentBall.dataset.balltype === nextNextBall.dataset.balltype) {
+      matches.push(currentBall.parentElement, nextNextBall.parentElement);
+      i += 2;
+    }
+  }
+}
+return matches;
+}
+
+function removeMatchesFromModel(matches) {
+  matches.forEach(match => {
+    match.remove();
+  })
+}
+
+function animateMatches(matches) {
+  matches.forEach(match => {
+    match.classList.add('remove')
+  })
+}
+
+function updateViewWithoutMatches() {
+  const balls = document.querySelectorAll('.ball');
+  balls.forEach(ball => {
+    ball.classList.remove('remove')
+  });
 }

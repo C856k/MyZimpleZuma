@@ -1,3 +1,14 @@
+@keyframes shootAnimation {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 body {
     background-color: #444;
     color: #8d8;
